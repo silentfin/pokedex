@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/silentfin/pokedex/internal/pokeapi"
 )
 
 type cliCommand struct {
@@ -14,6 +16,8 @@ type cliCommand struct {
 }
 
 type config struct {
+	previous string
+	next     string
 	commands map[string]cliCommand
 }
 
@@ -33,6 +37,16 @@ func getCommands() map[string]cliCommand {
 			description: "Exit the Pokedex",
 			callback:    commandExit,
 		},
+		"map": {
+			name:        "map",
+			description: "Show current 20 map areas",
+			callback:    commandMap,
+		},
+		"mapb": {
+			name:        "mapb",
+			description: "Show previous 20 map areas",
+			callback:    commandMapPrevious,
+		},
 	}
 }
 
@@ -48,6 +62,51 @@ func commandHelp(configs *config) error {
 func commandExit(configs *config) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
+	return nil
+}
+
+func commandMap(configs *config) error {
+	var url string
+	if configs.next != "" {
+		url = configs.next
+	} else {
+		url = "https://pokeapi.co/api/v2/location-area"
+	}
+
+	areas, err := pokeapi.GetMapAreas(url)
+	if err != nil {
+		return err
+	}
+
+	configs.next = areas.Next
+	configs.previous = areas.Previous
+
+	for _, area := range areas.Results {
+		fmt.Println(area.Name)
+	}
+	return nil
+}
+
+func commandMapPrevious(configs *config) error {
+	var url string
+	if configs.previous != "" {
+		url = configs.previous
+	} else {
+		fmt.Println("No previous pages")
+		return nil
+	}
+
+	areas, err := pokeapi.GetMapAreas(url)
+	if err != nil {
+		return err
+	}
+
+	configs.next = areas.Next
+	configs.previous = areas.Previous
+
+	for _, area := range areas.Results {
+		fmt.Println(area.Name)
+	}
 	return nil
 }
 
