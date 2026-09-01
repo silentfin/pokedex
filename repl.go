@@ -12,7 +12,7 @@ import (
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(*config) error
+	callback    func(*config, string) error
 }
 
 type config struct {
@@ -47,10 +47,15 @@ func getCommands() map[string]cliCommand {
 			description: "Show previous 20 map areas",
 			callback:    commandMapPrevious,
 		},
+		"explore": {
+			name:        "explore <area-name>",
+			description: "Show all pokemons in given area",
+			callback:    commandExplore,
+		},
 	}
 }
 
-func commandHelp(configs *config) error {
+func commandHelp(configs *config, args string) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Printf("Usage:\n\n")
 	for _, command := range configs.commands {
@@ -59,13 +64,13 @@ func commandHelp(configs *config) error {
 	return nil
 }
 
-func commandExit(configs *config) error {
+func commandExit(configs *config, args string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandMap(configs *config) error {
+func commandMap(configs *config, args string) error {
 	var url string
 	if configs.next != "" {
 		url = configs.next
@@ -87,7 +92,7 @@ func commandMap(configs *config) error {
 	return nil
 }
 
-func commandMapPrevious(configs *config) error {
+func commandMapPrevious(configs *config, args string) error {
 	var url string
 	if configs.previous != "" {
 		url = configs.previous
@@ -110,6 +115,20 @@ func commandMapPrevious(configs *config) error {
 	return nil
 }
 
+func commandExplore(configs *config, args string) error {
+	var url string
+	url = "https://pokeapi.co/api/v2/location-area/" + args
+	fmt.Printf("Exploring %s...\n", args)
+	pokemonData, err := pokeapi.GetPokemonsInLocationArea(url)
+	if err != nil {
+		return err
+	}
+	for _, pokemon := range pokemonData.PokemonEncounters {
+		fmt.Println(pokemon.Pokemon.Name)
+	}
+	return nil
+}
+
 func repl(configs *config) {
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
@@ -122,12 +141,18 @@ func repl(configs *config) {
 		if len(actualInput) == 0 {
 			continue
 		}
+		var args string
 		commandName := actualInput[0]
+		if len(actualInput) > 1 {
+			args = actualInput[1]
+		} else {
+			args = ""
+		}
 		command, ok := configs.commands[commandName]
 		if !ok {
 			fmt.Println("Unknown command")
 		} else {
-			err := command.callback(configs)
+			err := command.callback(configs, args)
 			if err != nil {
 				fmt.Println(err)
 			}
