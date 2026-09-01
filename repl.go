@@ -64,6 +64,11 @@ func getCommands() map[string]cliCommand {
 			description: "Fetch the given pokemon details if already caught",
 			callback:    commandInspect,
 		},
+		"pokedex": {
+			name:        "pokedex",
+			description: "Prints the list of all caught pokemons",
+			callback:    commandPokedex,
+		},
 	}
 }
 
@@ -177,6 +182,18 @@ func commandInspect(config *config, args string) error {
 		fmt.Println("Types:")
 		for _, t := range data.Types {
 			fmt.Printf("  -%s\n", t.Type.Name)
+		}
+	}
+	return nil
+}
+
+func commandPokedex(config *config, args string) error {
+	fmt.Println("Your Pokedex:")
+	if len(config.inventory) == 0 {
+		fmt.Println("OOPS! You haven't caught any pokemon yet!")
+	} else {
+		for _, d := range config.inventory {
+			fmt.Printf("  -%s\n", d.Name)
 		}
 	}
 	return nil
