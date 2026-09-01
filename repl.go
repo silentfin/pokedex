@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 
@@ -16,9 +17,10 @@ type cliCommand struct {
 }
 
 type config struct {
-	previous string
-	next     string
-	commands map[string]cliCommand
+	previous  string
+	next      string
+	commands  map[string]cliCommand
+	inventory map[string]pokeapi.Pokemon
 }
 
 func cleanInput(text string) []string {
@@ -51,6 +53,11 @@ func getCommands() map[string]cliCommand {
 			name:        "explore <area-name>",
 			description: "Show all pokemons in given area",
 			callback:    commandExplore,
+		},
+		"catch": {
+			name:        "catch <pokemon-name>",
+			description: "Catch the given pokemon",
+			callback:    commandCatch,
 		},
 	}
 }
@@ -119,12 +126,32 @@ func commandExplore(configs *config, args string) error {
 	var url string
 	url = "https://pokeapi.co/api/v2/location-area/" + args
 	fmt.Printf("Exploring %s...\n", args)
-	pokemonData, err := pokeapi.GetPokemonsInLocationArea(url)
+	pokemonsData, err := pokeapi.GetPokemonsInLocationArea(url)
 	if err != nil {
 		return err
 	}
-	for _, pokemon := range pokemonData.PokemonEncounters {
+	for _, pokemon := range pokemonsData.PokemonEncounters {
 		fmt.Println(pokemon.Pokemon.Name)
+	}
+	return nil
+}
+
+func commandCatch(config *config, args string) error {
+	var url string
+	url = "https://pokeapi.co/api/v2/pokemon/" + args
+	fmt.Printf("Throwing a Pokeball at %s...\n", args)
+	pokemonData, err := pokeapi.GetPokemonData(url)
+	if err != nil {
+		return err
+	} else {
+		catchRate := 100 - (pokemonData.BaseExperience / 4)
+		catch := rand.Intn(100)
+		if catch < catchRate {
+			fmt.Printf("%s was caught!\n", args)
+			config.inventory[args] = pokemonData
+		} else {
+			fmt.Printf("%s escaped!\n", args)
+		}
 	}
 	return nil
 }
